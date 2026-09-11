@@ -4,6 +4,7 @@ using System.Text.Json;
 using Crypton.Core.Domain;
 using Crypton.Core.Fiat;
 using Crypton.Core.Kyc;
+using Crypton.Integrations.Blockchain;
 using Crypton.Integrations.Kyc;
 using Crypton.Integrations.Payments;
 using Crypton.Integrations.Pricing;
@@ -12,6 +13,29 @@ namespace Crypton.Tests.Unit;
 
 public class IntegrationParsingTests
 {
+    [Fact]
+    public void Explorer_links_follow_the_configured_networks()
+    {
+        var live = ChainNetworks.Describe(false, new BitcoinOptions { Network = "testnet4" }, new EthereumOptions { ChainId = 11155111 });
+        var btc = live.Single(n => n.Network == "bitcoin");
+        var eth = live.Single(n => n.Network == "ethereum");
+        Assert.Equal("Bitcoin testnet4", btc.Name);
+        Assert.Equal("https://mempool.space/testnet4/tx/{txid}", btc.TxUrlTemplate);
+        Assert.Equal("Ethereum Sepolia", eth.Name);
+        Assert.Equal("https://sepolia.etherscan.io/address/{address}", eth.AddressUrlTemplate);
+
+        var mainnet = ChainNetworks.Describe(false, new BitcoinOptions { Network = "mainnet", ExplorerUrl = "https://blockstream.info/" }, new EthereumOptions { ChainId = 1 });
+        Assert.Equal("https://blockstream.info/tx/{txid}", mainnet[0].TxUrlTemplate);
+        Assert.Equal("Ethereum", mainnet[1].Name);
+        Assert.Equal("https://etherscan.io/tx/{txid}", mainnet[1].TxUrlTemplate);
+
+        var unknown = ChainNetworks.Describe(false, new BitcoinOptions { Network = "regtest" }, new EthereumOptions { ChainId = 31337 });
+        Assert.Null(unknown[0].TxUrlTemplate);
+        Assert.Null(unknown[1].AddressUrlTemplate);
+
+        Assert.All(ChainNetworks.Describe(true, new BitcoinOptions(), new EthereumOptions()), n => Assert.True(n.Simulated));
+    }
+
     [Fact]
     public void Paystack_signature_is_hmac_sha512_of_raw_body()
     {

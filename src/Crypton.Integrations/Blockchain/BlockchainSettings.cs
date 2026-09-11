@@ -22,6 +22,9 @@ public sealed class BitcoinOptions
     public decimal MaxFeeRateSatPerVb { get; set; } = 150;
 
     public bool SpendUnconfirmedChange { get; set; } = true;
+
+    /// <summary>Block explorer base URL for links in the apps, e.g. https://mempool.space/testnet4. Empty = derived from Network.</summary>
+    public string ExplorerUrl { get; set; } = "";
 }
 
 public sealed class EthereumOptions
@@ -53,6 +56,9 @@ public sealed class EthereumOptions
     public decimal PriorityFeeGwei { get; set; } = 1.5m;
 
     public decimal MaxFeeGwei { get; set; } = 200m;
+
+    /// <summary>Block explorer base URL for links in the apps, e.g. https://sepolia.etherscan.io. Empty = derived from ChainId.</summary>
+    public string ExplorerUrl { get; set; } = "";
 }
 
 public sealed class SanctionsOracleOptions

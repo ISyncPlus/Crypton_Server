@@ -1,5 +1,6 @@
 using Crypton.Api.Contracts;
 using Crypton.Core.Domain;
+using Crypton.Integrations.Blockchain;
 using Crypton.Tests.Infrastructure;
 using Microsoft.EntityFrameworkCore;
 using NBitcoin;
@@ -15,6 +16,16 @@ public class WalletTests(CryptonFactory factory)
 
     private async Task RunJobAsync(TestUser user, string job) =>
         await user.Client.PostNoContent($"/api/dev/jobs/{job}");
+
+    [Fact]
+    public async Task Network_info_is_public_and_marks_simulation()
+    {
+        using var anonymous = factory.CreateClient();
+        var networks = await anonymous.GetOk<List<ChainNetworkInfo>>("/api/market/networks");
+        Assert.Equal(new[] { "bitcoin", "ethereum" }, networks.Select(n => n.Network).ToArray());
+        Assert.All(networks, n => Assert.True(n.Simulated));
+        Assert.All(networks, n => Assert.Null(n.TxUrlTemplate));
+    }
 
     [Fact]
     public async Task Bitcoin_deposit_is_credited_once_after_confirmations()

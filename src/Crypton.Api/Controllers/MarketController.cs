@@ -3,16 +3,31 @@ using Crypton.Core.Assets;
 using Crypton.Core.Common;
 using Crypton.Core.Data;
 using Crypton.Core.Pricing;
+using Crypton.Core.Wallets;
+using Crypton.Integrations.Blockchain;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
 
 namespace Crypton.Api.Controllers;
 
 [Route("api/market")]
 [AllowAnonymous]
-public sealed class MarketController(AssetCatalog assets, PriceService prices, CryptonDbContext db, TimeProvider clock) : ApiControllerBase
+public sealed class MarketController(
+    AssetCatalog assets,
+    PriceService prices,
+    CryptonDbContext db,
+    TimeProvider clock,
+    IOptions<BlockchainOptions> blockchain,
+    IOptions<BitcoinOptions> bitcoin,
+    IOptions<EthereumOptions> ethereum) : ApiControllerBase
 {
+    /// <summary>Network names and block explorer link templates ({txid}, {address}) for the apps.</summary>
+    [HttpGet("networks")]
+    public IReadOnlyList<ChainNetworkInfo> Networks() =>
+        ChainNetworks.Describe(blockchain.Value.IsSimulated, bitcoin.Value, ethereum.Value);
+
     [HttpGet("assets")]
     public async Task<IReadOnlyList<AssetDto>> Assets(CancellationToken ct) =>
         (await assets.GetAllAsync(ct)).Select(a => a.ToDto()).ToList();
