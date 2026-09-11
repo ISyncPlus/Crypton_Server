@@ -41,3 +41,28 @@ public class PriceTick
 
     public DateTimeOffset CreatedAt { get; set; }
 }
+
+public enum SimulatedPaymentKind
+{
+    Charge,
+    Transfer,
+}
+
+/// <summary>State for the built-in simulated payment provider (development / demo mode only).</summary>
+public class SimulatedPayment
+{
+    public string Reference { get; set; } = "";
+
+    public SimulatedPaymentKind Kind { get; set; }
+
+    public long AmountMinor { get; set; }
+
+    /// <summary>pending | success | failed | abandoned</summary>
+    public string Status { get; set; } = "pending";
+
+    public string? RecipientCode { get; set; }
+
+    public DateTimeOffset CreatedAt { get; set; }
+
+    public DateTimeOffset? CompletedAt { get; set; }
+}

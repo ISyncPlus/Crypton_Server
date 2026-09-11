@@ -53,8 +53,10 @@ public sealed class WithdrawalProcessor(
                 continue;
             }
 
+            // Highest nonce still in flight; the gateway combines it with the node's pending nonce.
             var previousNonce = await db.CryptoWithdrawals.AsNoTracking()
-                .Where(w => w.Network == gateway.Network && w.Nonce != null)
+                .Where(w => w.Network == gateway.Network && w.Nonce != null &&
+                            (w.Status == CryptoWithdrawalStatus.Broadcasting || w.Status == CryptoWithdrawalStatus.Broadcast))
                 .MaxAsync(w => w.Nonce, ct);
 
             SignedWithdrawal signed;

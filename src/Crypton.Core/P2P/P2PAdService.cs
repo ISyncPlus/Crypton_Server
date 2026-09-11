@@ -265,7 +265,7 @@ public sealed class P2PAdService(
         return result.OrderByDescending(x => x.Item1.CreatedAt).ToList();
     }
 
-    internal async Task<P2PAd?> LockAsync(Guid adId, CancellationToken ct) =>
+    public async Task<P2PAd?> LockAsync(Guid adId, CancellationToken ct) =>
         (await db.P2PAds.FromSqlInterpolated($"SELECT * FROM p2p_ads WHERE id = {adId} FOR UPDATE").ToListAsync(ct)).SingleOrDefault();
 
     internal async Task EnsureP2PAllowedAsync(AppUser user, P2PSettings cfg, CancellationToken ct)

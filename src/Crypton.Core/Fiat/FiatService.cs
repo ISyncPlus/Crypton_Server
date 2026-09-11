@@ -89,7 +89,7 @@ public sealed partial class FiatService(
         }
 
         var resolved = await ResolveAccountAsync(accountNumber, bankCode, ct);
-        if (user.KycTier >= 1 && !NamesMatch(resolved.AccountName, user.FirstName, user.LastName))
+        if (user.KycTier >= 1 && !gateway.IsSimulated && !NamesMatch(resolved.AccountName, user.FirstName, user.LastName))
         {
             throw AppException.Validation("The bank account name must match the name on your verified profile.", "account_name_mismatch");
         }
