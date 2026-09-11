@@ -1,0 +1,13 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/Crypton.Api/Crypton.Api.csproj" />
+    <Project Path="src/Crypton.Core/Crypton.Core.csproj" />
+    <Project Path="src/Crypton.Integrations/Crypton.Integrations.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/Crypton.Tests/Crypton.Tests.csproj" />
+  </Folder>
+  <Folder Name="/tools/">
+    <Project Path="tools/Crypton.KeyTool/Crypton.KeyTool.csproj" />
+  </Folder>
+</Solution>

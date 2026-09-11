@@ -1,0 +1,18 @@
+# Local dev helper (not part of the project)
+.devhelper/
+
+# Build output
+bin/
+obj/
+artifacts/
+TestResults/
+*.user
+.vs/
+.idea/
+
+# Local secrets and data
+.env
+appsettings.Local.json
+data/
+*.pfx
+keys/
