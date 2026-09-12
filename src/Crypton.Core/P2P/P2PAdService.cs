@@ -86,7 +86,7 @@ public sealed class P2PAdService(
                         .ForUser(userId)
                         .Reference("p2p_ad", ad.Id)
                         .Idempotent($"p2p_ad:{ad.Id}:reserve")
-                        .Describe($"Reserve for P2P sell ad ({ad.TotalQuantity} {ad.Asset} + fees)")
+                        .Describe($"Reserve for P2P sell ad ({MoneyMath.ToPlainString(ad.TotalQuantity)} {ad.Asset} + fees)")
                         .User(userId, ad.Asset, AccountKind.Available, -ad.ReservedAmount)
                         .User(userId, ad.Asset, AccountKind.P2PReserve, ad.ReservedAmount),
                     token);
@@ -194,14 +194,27 @@ public sealed class P2PAdService(
         var asset = await assets.GetAsync(filter.Asset, ct);
         var market = await prices.GetFreshPriceAsync(asset.Code, TimeSpan.FromMinutes(30), ct);
 
-        var candidates = await (from ad in db.P2PAds.AsNoTracking()
-                                join maker in db.Users.AsNoTracking() on ad.UserId equals maker.Id
-                                where ad.Status == P2PAdStatus.Active && !ad.SuspendedByAdmin && ad.Side == filter.AdSide &&
-                                      ad.Asset == asset.Code && ad.RemainingQuantity > 0 && maker.Status == UserStatus.Active &&
-                                      (viewerId == null || ad.UserId != viewerId)
-                                select ad)
-            .Take(500)
-            .ToListAsync(ct);
+        // Price the ads in SQL as well, so the candidate cap keeps the best-priced ads rather than an arbitrary 500.
+        var marketPrice = market.PriceNgn;
+        var query = from ad in db.P2PAds.AsNoTracking()
+                    join maker in db.Users.AsNoTracking() on ad.UserId equals maker.Id
+                    where ad.Status == P2PAdStatus.Active && !ad.SuspendedByAdmin && ad.Side == filter.AdSide &&
+                          ad.Asset == asset.Code && ad.RemainingQuantity > 0 && maker.Status == UserStatus.Active &&
+                          (viewerId == null || ad.UserId != viewerId)
+                    select new
+                    {
+                        Ad = ad,
+                        Price = ad.PriceType == P2PPriceType.Fixed
+                            ? (ad.FixedPrice ?? 0m)
+                            : marketPrice * (1m + ad.FloatingMarginBps / 10_000m),
+                    };
+
+        // Makers selling: best (lowest) price first. Makers buying: best (highest) price first.
+        var ordered = filter.AdSide == P2PAdSide.Sell
+            ? query.OrderBy(x => x.Price).ThenBy(x => x.Ad.CreatedAt)
+            : query.OrderByDescending(x => x.Price).ThenBy(x => x.Ad.CreatedAt);
+
+        var candidates = await ordered.Take(500).Select(x => x.Ad).ToListAsync(ct);
 
         var priced = candidates
             .Select(ad =>
@@ -213,7 +226,6 @@ public sealed class P2PAdService(
             .Where(x => x.price > 0 && x.maxFiat >= x.ad.MinOrderFiat)
             .Where(x => filter.FiatAmount is null || (filter.FiatAmount >= x.ad.MinOrderFiat && filter.FiatAmount <= x.maxFiat));
 
-        // Makers selling: best (lowest) price first. Makers buying: best (highest) price first.
         priced = filter.AdSide == P2PAdSide.Sell ? priced.OrderBy(x => x.price) : priced.OrderByDescending(x => x.price);
         var all = priced.ToList();
 

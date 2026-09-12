@@ -378,7 +378,7 @@ public sealed class CryptoWithdrawalService(
             .ForUser(withdrawal.UserId)
             .Reference("crypto_withdrawal", withdrawal.Id)
             .Idempotent($"crypto_withdrawal:{withdrawal.Id}:settle")
-            .Describe($"Withdrawal {withdrawal.Amount} {withdrawal.Asset} to {withdrawal.ToAddress}")
+            .Describe($"Withdrawal {MoneyMath.ToPlainString(withdrawal.Amount)} {withdrawal.Asset} to {withdrawal.ToAddress}")
             .User(withdrawal.UserId, withdrawal.Asset, AccountKind.WithdrawalHold, -total)
             .System(SystemAccounts.Custody, withdrawal.Asset, withdrawal.Amount)
             .System(SystemAccounts.Fees, withdrawal.Asset, withdrawal.Fee);

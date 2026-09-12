@@ -1,0 +1,100 @@
+# A complete Crypton stack: database, mail catcher, API and web.
+#
+#   cp .env.example .env      # then edit .env
+#   docker compose up --build
+#
+# Web  → http://localhost:4200
+# API  → http://localhost:5080  (Scalar API reference at /scalar when Development)
+# Mail → http://localhost:8025
+#
+# WEB_PATH points at the checkout of the frontend repository (Crypton.git).
+services:
+  postgres:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-crypton}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}
+      POSTGRES_DB: ${POSTGRES_DB:-crypton}
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-crypton} -d ${POSTGRES_DB:-crypton}"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+    restart: unless-stopped
+
+  # Catches every outgoing email so you can read confirmation and reset links.
+  # Replace with real SMTP settings before going live.
+  mailpit:
+    image: axllent/mailpit:latest
+    ports:
+      - "8025:8025"
+    environment:
+      MP_MAX_MESSAGES: 500
+    restart: unless-stopped
+
+  api:
+    build:
+      context: .
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      ASPNETCORE_ENVIRONMENT: ${ASPNETCORE_ENVIRONMENT:-Development}
+      ConnectionStrings__Default: Host=postgres;Port=5432;Database=${POSTGRES_DB:-crypton};Username=${POSTGRES_USER:-crypton};Password=${POSTGRES_PASSWORD}
+      App__FrontendBaseUrl: ${FRONTEND_BASE_URL:-http://localhost:4200}
+      App__ApiBaseUrl: ${API_BASE_URL:-http://localhost:4200}
+      App__TrustForwardedHeaders: "true"
+      Jwt__SigningKey: ${JWT_SIGNING_KEY}
+      Jwt__RefreshCookieSecure: ${JWT_REFRESH_COOKIE_SECURE:-false}
+      Kyc__IdHashKey: ${KYC_ID_HASH_KEY}
+      Seed__AdminEmail: ${SEED_ADMIN_EMAIL:-}
+      Seed__AdminPassword: ${SEED_ADMIN_PASSWORD:-}
+      Seed__DemoData: ${SEED_DEMO_DATA:-false}
+      Email__Smtp__Host: ${SMTP_HOST:-mailpit}
+      Email__Smtp__Port: ${SMTP_PORT:-1025}
+      Email__Smtp__Security: ${SMTP_SECURITY:-None}
+      Email__Smtp__Username: ${SMTP_USERNAME:-}
+      Email__Smtp__Password: ${SMTP_PASSWORD:-}
+      Email__Smtp__FromAddress: ${SMTP_FROM_ADDRESS:-no-reply@crypton.local}
+      Pricing__Provider: ${PRICING_PROVIDER:-Simulated}
+      Pricing__CoinGecko__ApiKey: ${COINGECKO_API_KEY:-}
+      Blockchain__Mode: ${BLOCKCHAIN_MODE:-Simulated}
+      Blockchain__Bitcoin__Network: ${BITCOIN_NETWORK:-testnet4}
+      Blockchain__Bitcoin__ApiBaseUrl: ${BITCOIN_API_BASE_URL:-https://mempool.space/testnet4/api}
+      Blockchain__Bitcoin__AccountXpub: ${BITCOIN_ACCOUNT_XPUB:-}
+      Blockchain__Bitcoin__HotWalletWif: ${BITCOIN_HOT_WALLET_WIF:-}
+      Blockchain__Ethereum__RpcUrl: ${ETHEREUM_RPC_URL:-}
+      Blockchain__Ethereum__ChainId: ${ETHEREUM_CHAIN_ID:-11155111}
+      Blockchain__Ethereum__AccountXpub: ${ETHEREUM_ACCOUNT_XPUB:-}
+      Blockchain__Ethereum__HotWalletPrivateKey: ${ETHEREUM_HOT_WALLET_PRIVATE_KEY:-}
+      Blockchain__Ethereum__UsdtContract: ${ETHEREUM_USDT_CONTRACT:-}
+      Payments__Provider: ${PAYMENTS_PROVIDER:-Simulated}
+      Payments__Paystack__SecretKey: ${PAYSTACK_SECRET_KEY:-}
+      Kyc__Provider: ${KYC_PROVIDER:-Manual}
+      Kyc__Dojah__AppId: ${DOJAH_APP_ID:-}
+      Kyc__Dojah__SecretKey: ${DOJAH_SECRET_KEY:-}
+      Compliance__SanctionsOracle__Enabled: ${SANCTIONS_ORACLE_ENABLED:-false}
+      Compliance__SanctionsOracle__RpcUrl: ${SANCTIONS_ORACLE_RPC_URL:-}
+    volumes:
+      # KYC uploads and the data-protection keys. Back this up.
+      - api-data:/app/data
+    ports:
+      - "5080:8080"
+    restart: unless-stopped
+
+  web:
+    build:
+      context: ${WEB_PATH:-../P2P Frontend}
+    depends_on:
+      - api
+    environment:
+      API_HOST: api:8080
+    ports:
+      - "4200:8080"
+    restart: unless-stopped
+
+volumes:
+  postgres-data:
+  api-data:

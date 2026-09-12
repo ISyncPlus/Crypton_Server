@@ -275,7 +275,7 @@ public sealed class DepositScanner(
                     .ForUser(deposit.UserId)
                     .Reference("crypto_deposit", deposit.Id)
                     .Idempotent($"deposit:{deposit.Network}:{deposit.TxHash}:{deposit.OutputIndex}:{deposit.Asset}")
-                    .Describe($"Deposit {deposit.Amount} {deposit.Asset} ({deposit.TxHash})")
+                    .Describe($"Deposit {MoneyMath.ToPlainString(deposit.Amount)} {deposit.Asset} ({deposit.TxHash})")
                     .System(SystemAccounts.Custody, deposit.Asset, -deposit.Amount)
                     .User(deposit.UserId, deposit.Asset, AccountKind.Available, deposit.Amount),
                 token);

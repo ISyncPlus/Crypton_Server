@@ -212,7 +212,7 @@ public sealed class TradeService(
             .ForUser(quote.UserId)
             .Reference("trade_order", orderId)
             .Idempotent($"trade:{quote.Id}")
-            .Describe($"{quote.Kind} {quote.FromAmount} {quote.FromAsset} -> {quote.ToAmount} {quote.ToAsset}");
+            .Describe($"{quote.Kind} {MoneyMath.ToPlainString(quote.FromAmount)} {quote.FromAsset} -> {MoneyMath.ToPlainString(quote.ToAmount)} {quote.ToAsset}");
 
         switch (quote.Kind)
         {
